@@ -25,17 +25,19 @@ import { FinanceService } from '../services/finance.service';
           <button type="button" 
             (click)="setType('expense')"
             class="py-2.5 px-4 rounded-lg text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
-            [class]="type() === 'expense' 
-              ? 'bg-rose-500 text-white shadow-md shadow-rose-200' 
-              : 'text-slate-500 hover:bg-slate-200 hover:text-slate-700'">
+            [ngClass]="{
+              'bg-rose-500 text-white shadow-md shadow-rose-200': type() === 'expense',
+              'text-slate-500 hover:bg-slate-200 hover:text-slate-700': type() !== 'expense'
+            }">
             Expense
           </button>
           <button type="button" 
             (click)="setType('income')"
             class="py-2.5 px-4 rounded-lg text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-            [class]="type() === 'income' 
-              ? 'bg-emerald-500 text-white shadow-md shadow-emerald-200' 
-              : 'text-slate-500 hover:bg-slate-200 hover:text-slate-700'">
+            [ngClass]="{
+              'bg-emerald-500 text-white shadow-md shadow-emerald-200': type() === 'income',
+              'text-slate-500 hover:bg-slate-200 hover:text-slate-700': type() !== 'income'
+            }">
             Income
           </button>
         </div>
@@ -47,8 +49,10 @@ import { FinanceService } from '../services/finance.service';
             <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
             <input type="number" formControlName="amount" placeholder="0.00"
               class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-8 pr-4 text-slate-800 font-bold placeholder-slate-300 focus:outline-none focus:ring-2 focus:bg-white transition-all duration-200"
-              [class.focus:ring-rose-500]="type() === 'expense'"
-              [class.focus:ring-emerald-500]="type() === 'income'">
+              [ngClass]="{
+                'focus:ring-rose-500': type() === 'expense',
+                'focus:ring-emerald-500': type() === 'income'
+              }">
           </div>
         </div>
 
@@ -57,8 +61,10 @@ import { FinanceService } from '../services/finance.service';
            <label class="block text-xs font-semibold text-slate-500 mb-1.5 ml-1 uppercase tracking-wider">Description</label>
            <input type="text" formControlName="description" placeholder="e.g. Weekly Groceries"
              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 font-medium placeholder-slate-300 focus:outline-none focus:ring-2 focus:bg-white transition-all duration-200"
-             [class.focus:ring-rose-500]="type() === 'expense'"
-             [class.focus:ring-emerald-500]="type() === 'income'">
+             [ngClass]="{
+                'focus:ring-rose-500': type() === 'expense',
+                'focus:ring-emerald-500': type() === 'income'
+              }">
         </div>
 
         <!-- Category -->
@@ -69,9 +75,7 @@ import { FinanceService } from '../services/finance.service';
               <button type="button"
                 (click)="setCategory(cat)"
                 class="px-2 py-2 text-xs font-medium rounded-lg border transition-all duration-200 truncate"
-                [class]="selectedCategory === cat 
-                  ? (type() === 'expense' ? 'bg-rose-50 border-rose-200 text-rose-700 ring-1 ring-rose-500' : 'bg-emerald-50 border-emerald-200 text-emerald-700 ring-1 ring-emerald-500') 
-                  : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'">
+                [ngClass]="getCategoryClass(cat)">
                 {{ cat }}
               </button>
             }
@@ -81,9 +85,10 @@ import { FinanceService } from '../services/finance.service';
         <button type="submit" 
           [disabled]="form.invalid || !selectedCategory"
           class="w-full py-3.5 px-6 rounded-xl font-bold text-white shadow-lg transition-all duration-300 transform hover:translate-y-[-2px] active:translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none mt-2"
-          [class]="type() === 'expense' 
-            ? 'bg-gradient-to-r from-rose-500 to-rose-600 hover:shadow-rose-200' 
-            : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:shadow-emerald-200'">
+          [ngClass]="{
+            'bg-gradient-to-r from-rose-500 to-rose-600 hover:shadow-rose-200': type() === 'expense',
+            'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:shadow-emerald-200': type() === 'income'
+          }">
           {{ type() === 'expense' ? 'Add Expense' : 'Add Income' }}
         </button>
 
@@ -117,6 +122,18 @@ export class TransactionFormComponent {
 
   setCategory(c: string) {
     this.selectedCategory = c;
+  }
+
+  getCategoryClass(cat: string) {
+    const isSelected = this.selectedCategory === cat;
+    const isExpense = this.type() === 'expense';
+    
+    if (isSelected) {
+      return isExpense 
+        ? 'bg-rose-50 border-rose-200 text-rose-700 ring-1 ring-rose-500' 
+        : 'bg-emerald-50 border-emerald-200 text-emerald-700 ring-1 ring-emerald-500';
+    }
+    return 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50';
   }
 
   onSubmit() {
