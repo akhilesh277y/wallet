@@ -1,4 +1,4 @@
-import { Injectable, signal, computed, effect, Signal } from '@angular/core';
+import { Injectable, signal, computed, effect } from '@angular/core';
 
 export interface Transaction {
   id: string;
@@ -14,23 +14,62 @@ export interface Transaction {
 })
 export class FinanceService {
   
+  private getDefaultData(): Transaction[] {
+    return [
+      { id: '1', type: 'income', amount: 5000, category: 'Salary', description: 'Monthly Salary', date: new Date() },
+      { id: '2', type: 'expense', amount: 120, category: 'Food', description: 'Groceries', date: new Date() },
+      { id: '3', type: 'expense', amount: 50, category: 'Transport', description: 'Uber', date: new Date() },
+      { id: '4', type: 'expense', amount: 800, category: 'Rent', description: 'Monthly Rent', date: new Date() },
+    ];
+  }
+
+  // Load from local storage or default with robust error handling
+  private loadInitialData(): Transaction[] {
+    // Prevent access during server-side rendering or build
+    if (typeof localStorage === 'undefined') return this.getDefaultData();
+
+    try {
+      const stored = localStorage.getItem('walleto_transactions');
+      
+      // Explicitly check for "undefined" string which causes JSON.parse to crash
+      if (!stored || stored === 'undefined' || stored === 'null' || stored.trim() === '') {
+        return this.getDefaultData();
+      }
+
+      const parsed = JSON.parse(stored);
+      
+      if (!Array.isArray(parsed)) return this.getDefaultData();
+
+      return parsed.map((t: any) => ({
+        ...t,
+        amount: Number(t.amount) || 0, // Ensure amount is a number
+        date: new Date(t.date)
+      }));
+    } catch (e) {
+      console.warn('Failed to parse local storage, reverting to default data.', e);
+      // Optional: Clear bad data
+      try { localStorage.removeItem('walleto_transactions'); } catch {}
+      return this.getDefaultData();
+    }
+  }
+
   // State
   readonly transactions = signal<Transaction[]>(this.loadInitialData());
 
   // Computed Values
-  readonly totalIncome: Signal<number> = computed(() => 
+  readonly totalIncome = computed<number>(() => 
     this.transactions()
       .filter(t => t.type === 'income')
       .reduce((sum, t) => sum + t.amount, 0)
   );
 
-  readonly totalExpense: Signal<number> = computed(() => 
+  readonly totalExpense = computed<number>(() => 
     this.transactions()
       .filter(t => t.type === 'expense')
       .reduce((sum, t) => sum + t.amount, 0)
   );
 
-  readonly balance: Signal<number> = computed(() => this.totalIncome() - this.totalExpense());
+  readonly balance = computed<number>(() => this.totalIncome() - this.totalExpense());
 
   readonly expenseCategories = computed(() => {
     const expenses = this.transactions().filter(t => t.type === 'expense');
@@ -48,13 +87,9 @@ export class FinanceService {
   constructor() {
     // Persist to local storage whenever transactions change
     effect(() => {
-      try {
-        const data = this.transactions();
-        if (data && Array.isArray(data)) {
-          localStorage.setItem('walleto_transactions', JSON.stringify(data));
-        }
-      } catch (e) {
-        console.error('Error saving to local storage', e);
+      const data = this.transactions();
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('walleto_transactions', JSON.stringify(data));
       }
     });
   }
@@ -70,44 +105,5 @@ export class FinanceService {
 
   deleteTransaction(id: string) {
     this.transactions.update(prev => prev.filter(t => t.id !== id));
-  }
-
-  // Load from local storage or default
-  private loadInitialData(): Transaction[] {
-    const defaultData: Transaction[] = [
-      { id: '1', type: 'income', amount: 5000, category: 'Salary', description: 'Monthly Salary', date: new Date() },
-      { id: '2', type: 'expense', amount: 120, category: 'Food', description: 'Groceries', date: new Date() },
-      { id: '3', type: 'expense', amount: 50, category: 'Transport', description: 'Uber', date: new Date() },
-      { id: '4', type: 'expense', amount: 800, category: 'Rent', description: 'Monthly Rent', date: new Date() },
-    ];
-
-    if (typeof localStorage === 'undefined') return defaultData;
-
-    try {
-      const stored = localStorage.getItem('walleto_transactions');
-      
-      // Paranoid check: if strictly "undefined" string or null or empty, return default immediately
-      if (!stored || stored === 'undefined' || stored === 'null' || stored.trim() === '') {
-        // Clean up bad data if it exists as a string "undefined"
-        if (stored === 'undefined' || stored === 'null') {
-           localStorage.removeItem('walleto_transactions');
-        }
-        return defaultData;
-      }
-
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) {
-        return parsed.map((t: any) => ({
-          ...t,
-          amount: Number(t.amount) || 0, // Ensure amount is a number
-          date: new Date(t.date)
-        }));
-      }
-    } catch (e) {
-      console.warn('Failed to parse local storage, resetting data.', e);
-      localStorage.removeItem('walleto_transactions');
-    }
-    
-    return defaultData;
   }
 }

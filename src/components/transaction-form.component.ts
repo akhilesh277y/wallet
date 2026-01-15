@@ -97,7 +97,7 @@ import { FinanceService } from '../services/finance.service';
   `
 })
 export class TransactionFormComponent {
-  private fb = inject(FormBuilder);
+  private fb: FormBuilder = inject(FormBuilder);
   private financeService = inject(FinanceService);
 
   type = signal<'income' | 'expense'>('expense');
@@ -140,7 +140,7 @@ export class TransactionFormComponent {
     if (this.form.valid && this.selectedCategory) {
       this.financeService.addTransaction({
         type: this.type(),
-        amount: this.form.value.amount,
+        amount: Number(this.form.value.amount),
         description: this.form.value.description,
         category: this.selectedCategory
       });
